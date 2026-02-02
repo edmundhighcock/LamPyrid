@@ -1973,6 +1973,11 @@ class RuleTriggerKeyword(Enum):
     source_account_is = 'source_account_is'
     destination_account_is = 'destination_account_is'
     source_account_starts = 'source_account_starts'
+    # Legacy/deprecated trigger types for backward compatibility with older Firefly III rules
+    destination_account_starts = 'destination_account_starts'
+    destination_account_ends = 'destination_account_ends'
+    destination_account_contains = 'destination_account_contains'
+    amount_is = 'amount_is'
 
 
 class RuleTriggerType(Enum):
