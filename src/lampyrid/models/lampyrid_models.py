@@ -1,5 +1,6 @@
 """Simplified models for MCP tool interfaces with budget support."""
 
+import json
 from datetime import date, datetime, timezone
 from typing import Any, List, Literal, Optional
 
@@ -1245,6 +1246,14 @@ class TestRuleRequest(BaseModel):
 
     model_config = ConfigDict(extra='forbid')
 
+    @model_validator(mode='before')
+    @classmethod
+    def _parse_string_input(cls, data: Any) -> Any:
+        """Handle MCP clients that serialize the request as a JSON string."""
+        if isinstance(data, str):
+            return json.loads(data)
+        return data
+
     rule_id: str = Field(..., description='Unique identifier of the rule to test')
     start_date: date = Field(
         ...,
@@ -1280,6 +1289,14 @@ class ExecuteRuleRequest(BaseModel):
     """Request model for executing a rule (apply changes)."""
 
     model_config = ConfigDict(extra='forbid')
+
+    @model_validator(mode='before')
+    @classmethod
+    def _parse_string_input(cls, data: Any) -> Any:
+        """Handle MCP clients that serialize the request as a JSON string."""
+        if isinstance(data, str):
+            return json.loads(data)
+        return data
 
     rule_id: str = Field(..., description='Unique identifier of the rule to execute')
     start_date: date = Field(
