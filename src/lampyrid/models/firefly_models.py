@@ -1978,6 +1978,14 @@ class RuleTriggerKeyword(Enum):
     destination_account_ends = 'destination_account_ends'
     destination_account_contains = 'destination_account_contains'
     amount_is = 'amount_is'
+    # ID-based trigger types used by newer Firefly III versions
+    source_account_id = 'source_account_id'
+    destination_account_id = 'destination_account_id'
+    source_account_number = 'source_account_number'
+    destination_account_number = 'destination_account_number'
+    source_account_iban = 'source_account_iban'
+    destination_account_iban = 'destination_account_iban'
+    account_is_cash = 'account_is_cash'
 
 
 class RuleTriggerType(Enum):
