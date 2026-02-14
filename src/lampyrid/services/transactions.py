@@ -358,6 +358,8 @@ class TransactionService:
         # Build the update payload with only provided fields using explicit parameters
         update_kwargs = {}
 
+        if req.type is not None:
+            update_kwargs['type'] = TransactionTypeProperty(req.type)
         if req.amount is not None:
             update_kwargs['amount'] = str(req.amount)
         if req.description is not None:

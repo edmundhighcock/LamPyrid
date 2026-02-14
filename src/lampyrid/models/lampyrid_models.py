@@ -797,6 +797,11 @@ class UpdateTransactionRequest(BaseModel):
     model_config = ConfigDict(extra='forbid')
 
     transaction_id: str = Field(..., description='Unique identifier of the transaction to modify')
+    type: Optional[str] = Field(
+        None,
+        description='New transaction type (withdrawal, deposit, transfer). '
+        'Required when changing account types (e.g. converting a withdrawal to a transfer).',
+    )
     amount: Optional[float] = Field(None, description='New transaction amount (positive number)')
     description: Optional[str] = Field(
         None, description='New description for what the transaction was for'
