@@ -1355,6 +1355,56 @@ class RuleTestResult(BaseModel):
     )
 
 
+class CreateRuleRequest(BaseModel):
+    """Request model for creating a new rule."""
+
+    model_config = ConfigDict(extra='forbid')
+
+    title: str = Field(..., description='Title for the new rule')
+    description: Optional[str] = Field(None, description='Optional description of the rule')
+    rule_group_title: Optional[str] = Field(
+        None,
+        description=(
+            'Title of the rule group to place the rule in. '
+            'If not provided, the rule is placed in the default group.'
+        ),
+    )
+    trigger: str = Field(
+        'store-journal',
+        description=(
+            'When the rule should fire. '
+            '"store-journal" = on new transactions (most common), '
+            '"update-journal" = on transaction updates.'
+        ),
+    )
+    strict: bool = Field(
+        True,
+        description='If True, ALL triggers must match (AND). If False, any trigger can match (OR).',
+    )
+    active: bool = Field(True, description='Whether the rule is active')
+    stop_processing: bool = Field(
+        False, description='Whether to stop processing other rules after this one'
+    )
+    triggers: List[dict[str, Any]] = Field(
+        ...,
+        description=(
+            'Array of trigger objects. Each must have: '
+            'type (e.g. "destination_account_contains", "description_contains"), '
+            'value (the match string). '
+            'Optional: prohibited (bool, negate the trigger), active (bool), order (int).'
+        ),
+    )
+    actions: List[dict[str, Any]] = Field(
+        ...,
+        description=(
+            'Array of action objects. Each must have: '
+            'type (e.g. "set_category", "set_budget", "set_tags"), '
+            'value (the value to set). '
+            'Optional: active (bool), order (int).'
+        ),
+    )
+
+
 class RuleExecuteResult(BaseModel):
     """Result of executing a rule."""
 

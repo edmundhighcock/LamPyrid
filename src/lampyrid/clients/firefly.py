@@ -22,6 +22,7 @@ from ..models.firefly_models import (
     InsightTransfer,
     RuleArray,
     RuleSingle,
+    RuleStore,
     RuleUpdate,
     TransactionArray,
     TransactionSingle,
@@ -477,6 +478,14 @@ class FireflyClient:
     # =========================================================================
     # Rule Management Methods
     # =========================================================================
+
+    async def create_rule(self, rule_store: RuleStore) -> RuleSingle:
+        """Create a new rule."""
+        payload = self._serialize_model(rule_store)
+        r = await self._client.post('/api/v1/rules', json=payload)
+        self._handle_api_error(r, payload)
+        r.raise_for_status()
+        return RuleSingle.model_validate(r.json())
 
     async def get_rules(self, page: int = 1) -> RuleArray:
         """Get all rules with pagination."""

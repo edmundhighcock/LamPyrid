@@ -10,13 +10,16 @@ from typing import List
 from pydantic import ValidationError
 
 from ..clients.firefly import FireflyClient
-from ..models.firefly_models import RuleActionUpdate, RuleTriggerUpdate, RuleUpdate
+from ..models.firefly_models import RuleActionStore, RuleActionUpdate, RuleStore, RuleTriggerStore, RuleTriggerType, RuleTriggerUpdate, RuleUpdate
 from ..models.lampyrid_models import (
+    CreateRuleRequest,
     ExecuteRuleRequest,
     GetRuleRequest,
     Rule,
+    RuleActionSimple,
     RuleExecuteResult,
     RuleTestResult,
+    RuleTriggerSimple,
     SearchRulesRequest,
     TestRuleRequest,
     Transaction,
@@ -35,6 +38,73 @@ class RuleService:
     def __init__(self, client: FireflyClient) -> None:
         """Initialize the rule service with a FireflyClient instance."""
         self._client = client
+
+    async def create_rule(self, req: CreateRuleRequest) -> Rule:
+        """Create a new rule in Firefly III.
+
+        Args:
+            req: Request containing rule creation parameters
+
+        Returns:
+            Created rule details
+
+        Raises:
+            ValueError: If trigger/action dicts have invalid formats
+
+        """
+        # Convert trigger/action dicts to Firefly III store models
+        try:
+            triggers = [RuleTriggerStore(**t) for t in req.triggers]
+        except ValidationError as e:
+            raise ValueError(f'Invalid trigger format: {e}')
+
+        try:
+            actions = [RuleActionStore(**a) for a in req.actions]
+        except ValidationError as e:
+            raise ValueError(f'Invalid action format: {e}')
+
+        # Build the RuleStore object
+        rule_store = RuleStore(
+            title=req.title,
+            description=req.description,
+            rule_group_id='1',
+            rule_group_title=req.rule_group_title,
+            trigger=RuleTriggerType(req.trigger),
+            active=req.active,
+            strict=req.strict,
+            stop_processing=req.stop_processing,
+            triggers=triggers,
+            actions=actions,
+        )
+
+        # Call the client to create the rule
+        rule_single = await self._client.create_rule(rule_store)
+        rule_attrs = rule_single.data.attributes
+
+        return Rule(
+            id=rule_single.data.id,
+            title=rule_attrs.title,
+            description=rule_attrs.description,
+            active=rule_attrs.active or True,
+            strict=rule_attrs.strict,
+            stop_processing=rule_attrs.stop_processing or False,
+            trigger=rule_attrs.trigger.value,
+            triggers=[
+                RuleTriggerSimple(
+                    type=t.type,
+                    value=t.value,
+                    prohibited=t.prohibited or False,
+                )
+                for t in rule_attrs.triggers
+            ],
+            actions=[
+                RuleActionSimple(
+                    type=a.type,
+                    value=a.value,
+                )
+                for a in rule_attrs.actions
+            ],
+        )
 
     async def search_rules(self, req: SearchRulesRequest) -> List[Rule]:
         """Search rules with client-side filtering.

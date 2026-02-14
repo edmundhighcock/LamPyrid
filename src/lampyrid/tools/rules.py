@@ -10,6 +10,7 @@ from fastmcp import FastMCP
 
 from ..clients.firefly import FireflyClient
 from ..models.lampyrid_models import (
+    CreateRuleRequest,
     ExecuteRuleRequest,
     GetRuleRequest,
     Rule,
@@ -35,6 +36,18 @@ def create_rules_server(client: FireflyClient) -> FastMCP:
     rule_service = RuleService(client)
 
     rules_mcp = FastMCP('rules')
+
+    @rules_mcp.tool(tags={'rules', 'create'})
+    async def create_rule(req: CreateRuleRequest) -> Rule:
+        """Create a new rule for automatic transaction classification.
+
+        Rules automatically apply actions (like setting a category) to transactions
+        that match specified triggers (like destination account name).
+
+        Common use: auto-classify recurring vendor expenses by creating a rule with
+        a destination_account_contains trigger and a set_category action.
+        """
+        return await rule_service.create_rule(req)
 
     @rules_mcp.tool(tags={'rules', 'search'})
     async def search_rules(req: SearchRulesRequest) -> List[Rule]:
