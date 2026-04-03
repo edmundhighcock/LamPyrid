@@ -122,6 +122,8 @@ class TransactionService:
             date=req.date,
             source_id=req.source_id,
             destination_id=req.destination_id,
+            foreign_amount=str(req.foreign_amount) if req.foreign_amount is not None else None,
+            foreign_currency_code=req.foreign_currency_code,
         )
         trx_store = TransactionStore(
             transactions=[trx],
@@ -374,6 +376,10 @@ class TransactionService:
             update_kwargs['budget_id'] = req.budget_id
         if req.category_name is not None:
             update_kwargs['category_name'] = req.category_name
+        if req.foreign_amount is not None:
+            update_kwargs['foreign_amount'] = str(req.foreign_amount)
+        if req.foreign_currency_code is not None:
+            update_kwargs['foreign_currency_code'] = req.foreign_currency_code
 
         trx_split_update = TransactionSplitUpdate(**update_kwargs)
 

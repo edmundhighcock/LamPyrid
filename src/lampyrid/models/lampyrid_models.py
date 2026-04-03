@@ -115,6 +115,12 @@ class Transaction(BaseModel):
     source_name: Optional[str] = Field(None, description='Source account name')
     destination_name: Optional[str] = Field(None, description='Destination account name')
     currency_code: Optional[str] = Field(None, description='Currency code')
+    foreign_amount: Optional[str] = Field(
+        None, description='Amount in foreign currency (if applicable)'
+    )
+    foreign_currency_code: Optional[str] = Field(
+        None, description='Currency code of the foreign currency (e.g. GBP, AUD)'
+    )
     budget_id: Optional[str] = Field(None, description='ID of the budget for this transaction')
     budget_name: Optional[str] = Field(None, description='Name of the budget for this transaction')
 
@@ -133,6 +139,8 @@ class Transaction(BaseModel):
             source_name=inner_trx.source_name,
             destination_name=inner_trx.destination_name,
             currency_code=inner_trx.currency_code,
+            foreign_amount=inner_trx.foreign_amount,
+            foreign_currency_code=inner_trx.foreign_currency_code,
             budget_id=inner_trx.budget_id,
             budget_name=inner_trx.budget_name,
         )
@@ -152,6 +160,8 @@ class Transaction(BaseModel):
             source_name=first_trx.source_name,
             destination_name=first_trx.destination_name,
             currency_code=first_trx.currency_code,
+            foreign_amount=first_trx.foreign_amount,
+            foreign_currency_code=first_trx.foreign_currency_code,
             budget_id=first_trx.budget_id,
             budget_name=first_trx.budget_name,
         )
@@ -340,6 +350,16 @@ class CreateTransferRequest(BaseModel):
     destination_id: str = Field(
         ...,
         description='ID of your account receiving the money. Must be an asset account you own.',
+    )
+    foreign_amount: Optional[float] = Field(
+        None,
+        description='Amount in foreign currency, when source and destination accounts have '
+        'different currencies (e.g., 380.00 for a SEK→GBP transfer)',
+    )
+    foreign_currency_code: Optional[str] = Field(
+        None,
+        description='Currency code of the foreign currency (e.g., "GBP", "AUD"). '
+        'Required when foreign_amount is provided.',
     )
 
 
@@ -820,6 +840,16 @@ class UpdateTransactionRequest(BaseModel):
     )
     category_name: Optional[str] = Field(
         None, description='New category name for transaction classification'
+    )
+    foreign_amount: Optional[float] = Field(
+        None,
+        description='Amount in foreign currency, when source and destination accounts have '
+        'different currencies',
+    )
+    foreign_currency_code: Optional[str] = Field(
+        None,
+        description='Currency code of the foreign currency (e.g., "GBP", "AUD"). '
+        'Required when foreign_amount is provided.',
     )
 
 
