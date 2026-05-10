@@ -28,6 +28,7 @@ class TestSettings:
             assert settings.mcp_transport == 'stdio'  # Default value
             assert settings.mcp_host == '0.0.0.0'  # Default value
             assert settings.mcp_port == 3000  # Default value
+            assert settings.firefly_request_timeout == 180.0  # Default value
 
     def test_settings_with_all_fields(self):
         """Test creating settings with all fields configured."""

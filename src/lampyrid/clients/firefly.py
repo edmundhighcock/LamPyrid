@@ -39,6 +39,14 @@ class FireflyClient:
     def __init__(self) -> None:
         """Initialize the Firefly III API client with authentication headers."""
         base = str(settings.firefly_base_url).rstrip('/')
+        # Use granular timeouts: keep connect/pool short (fail fast on network problems)
+        # but allow long read/write for slow Firefly III writes (balance propagation etc.)
+        timeout = httpx.Timeout(
+            connect=10.0,
+            read=settings.firefly_request_timeout,
+            write=settings.firefly_request_timeout,
+            pool=10.0,
+        )
         self._client = httpx.AsyncClient(
             base_url=base,
             headers={
@@ -46,7 +54,7 @@ class FireflyClient:
                 'Accept': 'application/json',
                 'Content-Type': 'application/json',
             },
-            timeout=30.0,
+            timeout=timeout,
         )
 
     async def aclose(self) -> None:

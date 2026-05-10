@@ -25,6 +25,15 @@ class Settings(BaseSettings):
         min_length=1,
         description='Personal access token for Firefly III API authentication',
     )
+    firefly_request_timeout: float = Field(
+        default=180.0,
+        gt=0,
+        description=(
+            'Read/write timeout in seconds for Firefly III API requests. '
+            'Firefly III can be slow on writes due to balance/cumulator propagation; '
+            'set higher if you see ReadTimeout errors. Connect/pool timeouts stay at 10s.'
+        ),
+    )
 
     # Logging Configuration (Optional)
     logging_level: Literal['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'] = Field(
