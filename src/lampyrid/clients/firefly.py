@@ -12,6 +12,7 @@ from ..models.firefly_models import (
     AccountSingle,
     AccountStore,
     AccountTypeFilter,
+    AccountUpdate,
     AvailableBudgetArray,
     BudgetArray,
     BudgetLimitArray,
@@ -135,6 +136,14 @@ class FireflyClient:
         """Create a new account in Firefly III."""
         r = await self._client.post('/api/v1/accounts', json=self._serialize_model(account_store))
         self._handle_api_error(r)
+        r.raise_for_status()
+        return AccountSingle.model_validate(r.json())
+
+    async def update_account(self, account_id: str, account_update: AccountUpdate) -> AccountSingle:
+        """Update an existing account in Firefly III."""
+        payload = self._serialize_model(account_update, exclude_unset=True)
+        r = await self._client.put(f'/api/v1/accounts/{account_id}', json=payload)
+        self._handle_api_error(r, payload)
         r.raise_for_status()
         return AccountSingle.model_validate(r.json())
 

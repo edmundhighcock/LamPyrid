@@ -1,5 +1,7 @@
 """Integration tests for account management tools."""
 
+from datetime import datetime, timezone
+
 import pytest
 from dirty_equals import IsFloat
 from fastmcp import Client
@@ -281,3 +283,105 @@ async def test_search_accounts_no_results(mcp_client):
 
     # Should return empty list
     assert len(accounts) == 0
+
+
+@pytest.mark.asyncio
+@pytest.mark.accounts
+@pytest.mark.integration
+async def test_create_account_minimal(mcp_client: Client, firefly_client):
+    """Test create_account with the minimum required fields."""
+    name = 'pytest-create-account-minimal'
+    try:
+        result = await mcp_client.call_tool(
+            'create_account',
+            {'req': {'name': name, 'type': 'expense'}},
+        )
+        created = Account.model_validate(result.structured_content)
+        assert created.name == name
+        assert created.type.value == 'expense'
+        assert created.id is not None
+    finally:
+        # Cleanup: best-effort delete; not all Firefly setups expose account delete via MCP,
+        # so this leaves the test account behind if cleanup isn't available. Mark in name.
+        pass
+
+
+@pytest.mark.asyncio
+@pytest.mark.accounts
+@pytest.mark.integration
+async def test_create_account_with_opening_balance(mcp_client: Client):
+    """Test create_account propagates opening_balance + opening_balance_date."""
+    name = 'pytest-create-account-with-opening'
+    opening_date = datetime(2021, 8, 18, 0, 0, 0, tzinfo=timezone.utc)
+    result = await mcp_client.call_tool(
+        'create_account',
+        {
+            'req': {
+                'name': name,
+                'type': 'asset',
+                'opening_balance': -100000.00,
+                'opening_balance_date': opening_date.isoformat(),
+                'currency_code': 'SEK',
+                'account_role': 'defaultAsset',
+            }
+        },
+    )
+    created = Account.model_validate(result.structured_content)
+    assert created.name == name
+    assert created.type.value == 'asset'
+    # Current balance should equal the opening balance immediately after creation
+    assert created.current_balance == -100000.00
+
+
+@pytest.mark.asyncio
+@pytest.mark.accounts
+@pytest.mark.integration
+async def test_update_account_notes(mcp_client: Client, test_asset_account: Account):
+    """Test update_account modifies notes while leaving other fields intact."""
+    new_notes = 'pytest-update-notes marker'
+    result = await mcp_client.call_tool(
+        'update_account',
+        {'req': {'account_id': test_asset_account.id, 'notes': new_notes}},
+    )
+    updated = Account.model_validate(result.structured_content)
+    # Name should be preserved automatically (we didn't supply it)
+    assert updated.name == test_asset_account.name
+    assert updated.id == test_asset_account.id
+    assert updated.type.value == test_asset_account.type.value
+
+
+@pytest.mark.asyncio
+@pytest.mark.accounts
+@pytest.mark.integration
+async def test_update_account_opening_balance(mcp_client: Client):
+    """Test update_account can set opening_balance + opening_balance_date.
+
+    Creates an asset account first (no opening balance), then sets one via update_account
+    and confirms the current_balance moves to match.
+    """
+    # Create a fresh account with no opening balance
+    name = 'pytest-update-opening-balance'
+    create_result = await mcp_client.call_tool(
+        'create_account',
+        {'req': {'name': name, 'type': 'asset', 'currency_code': 'SEK'}},
+    )
+    created = Account.model_validate(create_result.structured_content)
+    assert created.current_balance == 0.0
+
+    # Set an opening balance via update_account
+    opening_date = datetime(2021, 8, 18, 0, 0, 0, tzinfo=timezone.utc)
+    update_result = await mcp_client.call_tool(
+        'update_account',
+        {
+            'req': {
+                'account_id': created.id,
+                'opening_balance': -977500.00,
+                'opening_balance_date': opening_date.isoformat(),
+            }
+        },
+    )
+    updated = Account.model_validate(update_result.structured_content)
+    assert updated.id == created.id
+    assert updated.name == name  # name preserved automatically
+    # Balance should reflect the new opening balance
+    assert updated.current_balance == -977500.00

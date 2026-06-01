@@ -1,7 +1,7 @@
 """Account Management MCP Tools.
 
 This module provides MCP tools for managing Firefly III accounts including
-listing, searching, and retrieving account details.
+listing, searching, retrieving, creating, and updating accounts.
 """
 
 from typing import List
@@ -11,9 +11,11 @@ from fastmcp import FastMCP
 from ..clients.firefly import FireflyClient
 from ..models.lampyrid_models import (
     Account,
+    CreateAccountRequest,
     GetAccountRequest,
     ListAccountRequest,
     SearchAccountRequest,
+    UpdateAccountRequest,
 )
 from ..services.accounts import AccountService
 
@@ -56,5 +58,27 @@ def create_accounts_server(client: FireflyClient) -> FastMCP:
         Useful when you know the account name but not the ID. Supports filtering by account type.
         """
         return await account_service.search_accounts(req)
+
+    @accounts_mcp.tool(tags={'accounts', 'manage'})
+    async def create_account(req: CreateAccountRequest) -> Account:
+        """Create a new account in Firefly III.
+
+        Use for adding a new bank account, a loan modelled as an asset account, an
+        expense category, or a revenue source. Set opening_balance + opening_balance_date
+        if the account starts with a non-zero balance (e.g. a mortgage with an origination
+        principal that pre-dates Firefly).
+        """
+        return await account_service.create_account_from_request(req)
+
+    @accounts_mcp.tool(tags={'accounts', 'manage'})
+    async def update_account(req: UpdateAccountRequest) -> Account:
+        """Modify fields on an existing account.
+
+        Primary use: setting opening_balance + opening_balance_date on a loan whose
+        opening principal was never journalled into Firefly. Also useful for updating
+        account notes, IBAN, interest rate, or toggling active. Only fields you set
+        are sent — omitted fields are left unchanged.
+        """
+        return await account_service.update_account(req)
 
     return accounts_mcp

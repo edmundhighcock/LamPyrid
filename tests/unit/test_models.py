@@ -1,16 +1,20 @@
 """Unit tests for lampyrid models."""
 
+from datetime import datetime, timezone
+
 import pytest
 from pydantic import ValidationError
 
 from lampyrid.models.firefly_models import TransactionTypeProperty
 from lampyrid.models.lampyrid_models import (
+    CreateAccountRequest,
     CreateBudgetRequest,
     CreateBulkTransactionsRequest,
     CreateDepositRequest,
     CreateWithdrawalRequest,
     SearchTransactionsRequest,
     Transaction,
+    UpdateAccountRequest,
     utc_now,
 )
 
@@ -217,3 +221,87 @@ class TestCreateBudgetRequest:
         assert request.auto_budget_type == 'none'
         assert request.auto_budget_amount is None
         assert request.auto_budget_period is None
+
+
+@pytest.mark.unit
+class TestUpdateAccountRequest:
+    """Test cases for UpdateAccountRequest model."""
+
+    def test_update_account_request_minimum_only_account_id(self):
+        """account_id alone is sufficient — every other field is optional."""
+        request = UpdateAccountRequest(account_id='852')
+        assert request.account_id == '852'
+        # All other fields default to None
+        assert request.name is None
+        assert request.opening_balance is None
+        assert request.opening_balance_date is None
+        assert request.notes is None
+
+    def test_update_account_request_opening_balance_set(self):
+        """opening_balance + opening_balance_date round-trip correctly."""
+        when = datetime(2021, 8, 18, 0, 0, 0, tzinfo=timezone.utc)
+        request = UpdateAccountRequest(
+            account_id='852',
+            opening_balance=-977500.0,
+            opening_balance_date=when,
+        )
+        # exclude_unset should drop everything except what we explicitly set
+        dumped = request.model_dump(exclude_unset=True)
+        assert dumped == {
+            'account_id': '852',
+            'opening_balance': -977500.0,
+            'opening_balance_date': when,
+        }
+
+    def test_update_account_request_rejects_extra_fields(self):
+        """Extra fields not in the schema must be rejected (extra='forbid')."""
+        with pytest.raises(ValidationError, match='Extra inputs are not permitted'):
+            UpdateAccountRequest(account_id='852', unknown_field='nope')  # type: ignore[call-arg]
+
+    def test_update_account_request_requires_account_id(self):
+        """account_id is the only required field."""
+        with pytest.raises(ValidationError, match='account_id'):
+            UpdateAccountRequest()  # type: ignore[call-arg]
+
+
+@pytest.mark.unit
+class TestCreateAccountRequest:
+    """Test cases for CreateAccountRequest model."""
+
+    def test_create_account_request_minimum_required(self):
+        """Name + type are the only required fields."""
+        request = CreateAccountRequest(name='New asset', type='asset')
+        assert request.name == 'New asset'
+        assert request.type == 'asset'
+        # Optional fields default to None / True per field defaults
+        assert request.opening_balance is None
+        assert request.notes is None
+        # active default is True per Firefly's AccountStore convention
+        assert request.active is True
+        assert request.include_net_worth is True
+
+    def test_create_account_request_with_opening_balance(self):
+        """opening_balance + opening_balance_date are usable together."""
+        when = datetime(2021, 8, 18, 0, 0, 0, tzinfo=timezone.utc)
+        request = CreateAccountRequest(
+            name='Mortgage',
+            type='asset',
+            opening_balance=-977500.0,
+            opening_balance_date=when,
+            currency_code='SEK',
+        )
+        assert request.opening_balance == -977500.0
+        assert request.opening_balance_date == when
+        assert request.currency_code == 'SEK'
+
+    def test_create_account_request_rejects_extra_fields(self):
+        """Extra fields not in the schema must be rejected (extra='forbid')."""
+        with pytest.raises(ValidationError, match='Extra inputs are not permitted'):
+            CreateAccountRequest(name='X', type='asset', unknown='nope')  # type: ignore[call-arg]
+
+    def test_create_account_request_requires_name_and_type(self):
+        """Name and type are required."""
+        with pytest.raises(ValidationError):
+            CreateAccountRequest(name='X')  # type: ignore[call-arg]
+        with pytest.raises(ValidationError):
+            CreateAccountRequest(type='asset')  # type: ignore[call-arg]

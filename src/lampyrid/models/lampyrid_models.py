@@ -224,6 +224,134 @@ class GetAccountRequest(BaseModel):
     )
 
 
+class CreateAccountRequest(BaseModel):
+    """Create a new account in Firefly III.
+
+    Use this to add new asset accounts (e.g. a new bank account, a loan modelled as an
+    asset account), expense accounts (categories you spend on), or revenue accounts.
+    Set opening_balance + opening_balance_date if the account has a non-zero starting
+    balance (e.g. a mortgage with a principal that pre-dates Firefly).
+    """
+
+    model_config = ConfigDict(extra='forbid')
+
+    name: str = Field(..., description='Display name for the new account')
+    type: str = Field(
+        ...,
+        description=(
+            'Account type. One of: asset, expense, revenue, liability, liabilities, '
+            'cash, initial-balance, reconciliation.'
+        ),
+    )
+    iban: Optional[str] = Field(None, description='IBAN, if applicable')
+    bic: Optional[str] = Field(None, description='BIC, if applicable')
+    account_number: Optional[str] = Field(None, description='Bank account number')
+    opening_balance: Optional[float] = Field(
+        None,
+        description=(
+            'Opening balance (positive or negative number). For loan-as-asset accounts '
+            'following the "negative = we owe" convention, the original principal is '
+            'entered as a negative number.'
+        ),
+    )
+    opening_balance_date: Optional[datetime] = Field(
+        None,
+        description='Date the opening balance applies from (ISO 8601 with timezone).',
+    )
+    virtual_balance: Optional[float] = Field(None, description='Virtual balance adjustment')
+    currency_code: Optional[str] = Field(
+        None, description='ISO 4217 currency code (e.g. SEK, GBP, USD)'
+    )
+    currency_id: Optional[str] = Field(
+        None, description='Firefly currency ID (alternative to code)'
+    )
+    active: Optional[bool] = Field(True, description='Whether the account is active')
+    include_net_worth: Optional[bool] = Field(
+        True, description='Whether the account contributes to the net-worth calculation'
+    )
+    account_role: Optional[str] = Field(
+        None,
+        description=(
+            'For asset accounts: defaultAsset, sharedAsset, savingAsset, ccAsset, or '
+            'cashWalletAsset. Optional.'
+        ),
+    )
+    liability_type: Optional[str] = Field(
+        None, description='For liability accounts: loan, debt, or mortgage. Optional.'
+    )
+    liability_direction: Optional[str] = Field(
+        None, description='For liability accounts: credit or debit. Optional.'
+    )
+    interest: Optional[str] = Field(
+        None, description='Interest percentage as a string (e.g. "1.58"). Used for liabilities.'
+    )
+    interest_period: Optional[str] = Field(
+        None,
+        description=(
+            'Interest period: daily, monthly, quarterly, half-year, yearly. Used for liabilities.'
+        ),
+    )
+    notes: Optional[str] = Field(None, description='Free-text notes attached to the account')
+
+
+class UpdateAccountRequest(BaseModel):
+    """Modify fields on an existing Firefly III account.
+
+    Common uses: setting `opening_balance` + `opening_balance_date` on a loan account
+    whose initial principal was never journalled; updating account `notes` to capture
+    loan metadata; toggling `active`. Only fields that are explicitly set are sent to
+    Firefly — omitted fields keep their existing values. The `name` field is fetched
+    from the live account if not supplied, so callers can update a single field without
+    needing to know the current name.
+    """
+
+    model_config = ConfigDict(extra='forbid')
+
+    account_id: str = Field(
+        ...,
+        description=(
+            'Unique identifier of the account to modify (from list_accounts or search_accounts)'
+        ),
+    )
+    name: Optional[str] = Field(
+        None,
+        description='New display name. If omitted, the existing name is preserved automatically.',
+    )
+    iban: Optional[str] = Field(None, description='New IBAN')
+    bic: Optional[str] = Field(None, description='New BIC')
+    account_number: Optional[str] = Field(None, description='New bank account number')
+    opening_balance: Optional[float] = Field(
+        None,
+        description=(
+            'New opening balance (positive or negative number). For loan-as-asset accounts '
+            'following the "negative = we owe" convention, the original principal is '
+            'entered as a negative number.'
+        ),
+    )
+    opening_balance_date: Optional[datetime] = Field(
+        None,
+        description=(
+            'New opening-balance date (ISO 8601 with timezone, e.g. "2021-08-18T00:00:00+02:00").'
+        ),
+    )
+    virtual_balance: Optional[float] = Field(None, description='New virtual balance adjustment')
+    currency_code: Optional[str] = Field(None, description='New ISO 4217 currency code')
+    currency_id: Optional[str] = Field(None, description='New Firefly currency ID')
+    active: Optional[bool] = Field(None, description='New active flag')
+    include_net_worth: Optional[bool] = Field(
+        None, description='Whether the account contributes to the net-worth calculation'
+    )
+    account_role: Optional[str] = Field(
+        None, description='New account role (see CreateAccountRequest)'
+    )
+    liability_type: Optional[str] = Field(
+        None, description='New liability type (loan/debt/mortgage)'
+    )
+    interest: Optional[str] = Field(None, description='New interest percentage as a string')
+    interest_period: Optional[str] = Field(None, description='New interest period')
+    notes: Optional[str] = Field(None, description='New free-text notes attached to the account')
+
+
 class CreateWithdrawalRequest(BaseModel):
     """Request model for creating a withdrawal transaction."""
 
