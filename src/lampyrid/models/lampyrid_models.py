@@ -11,6 +11,7 @@ from .firefly_models import (
     AccountTypeFilter,
     BudgetRead,
     RuleActionKeyword,
+    RuleGroupRead,
     RuleRead,
     RuleTriggerKeyword,
     ShortAccountTypeProperty,
@@ -1264,6 +1265,12 @@ class Rule(BaseModel):
     actions: List[RuleActionSimple] = Field(
         default_factory=list, description='List of actions for this rule'
     )
+    rule_group_id: Optional[str] = Field(
+        None, description='ID of the rule group this rule belongs to'
+    )
+    rule_group_title: Optional[str] = Field(
+        None, description='Title of the rule group this rule belongs to'
+    )
 
     @classmethod
     def from_rule_read(cls, rule_read: RuleRead) -> 'Rule':
@@ -1271,6 +1278,8 @@ class Rule(BaseModel):
         rule_attrs = rule_read.attributes
         return cls(
             id=rule_read.id,
+            rule_group_id=rule_attrs.rule_group_id,
+            rule_group_title=rule_attrs.rule_group_title,
             title=rule_attrs.title,
             description=rule_attrs.description,
             active=rule_attrs.active if rule_attrs.active is not None else True,
@@ -1566,6 +1575,75 @@ class CreateRuleRequest(BaseModel):
             'Optional: active (bool), order (int).'
         ),
     )
+
+
+class RuleGroupInfo(BaseModel):
+    """Simplified rule group model for MCP responses."""
+
+    id: str = Field(..., description='Unique identifier for the rule group')
+    title: str = Field(..., description='Display name of the rule group')
+    description: Optional[str] = Field(None, description='Optional description of the group')
+    order: Optional[int] = Field(
+        None,
+        description=(
+            'Processing order of the group. Groups run in ascending order at '
+            'store-journal time, so a group with the highest order runs last.'
+        ),
+    )
+    active: bool = Field(True, description='Whether the rule group is active')
+
+    @classmethod
+    def from_rule_group_read(cls, group_read: RuleGroupRead) -> 'RuleGroupInfo':
+        """Create a RuleGroupInfo from a Firefly RuleGroupRead object."""
+        attrs = group_read.attributes
+        return cls(
+            id=group_read.id,
+            title=attrs.title,
+            description=attrs.description,
+            order=attrs.order,
+            active=attrs.active if attrs.active is not None else True,
+        )
+
+
+class ListRuleGroupsRequest(BaseModel):
+    """Request model for listing rule groups."""
+
+    model_config = ConfigDict(extra='forbid')
+
+
+class CreateRuleGroupRequest(BaseModel):
+    """Request model for creating a rule group."""
+
+    model_config = ConfigDict(extra='forbid')
+
+    title: str = Field(..., description='Title for the new rule group')
+    description: Optional[str] = Field(None, description='Optional description of the group')
+    order: Optional[int] = Field(
+        None,
+        description=(
+            'Optional processing order. If omitted, Firefly appends the group '
+            'at the end (it runs after all existing groups).'
+        ),
+    )
+    active: bool = Field(True, description='Whether the rule group is active')
+
+
+class UpdateRuleGroupRequest(BaseModel):
+    """Request model for updating a rule group (title, description, order, active)."""
+
+    model_config = ConfigDict(extra='forbid')
+
+    rule_group_id: str = Field(..., description='Unique identifier of the rule group to update')
+    title: Optional[str] = Field(None, description='New title for the rule group')
+    description: Optional[str] = Field(None, description='New description for the rule group')
+    order: Optional[int] = Field(
+        None,
+        description=(
+            'New processing order (1-based). Firefly reorders the other groups '
+            'around the new position.'
+        ),
+    )
+    active: Optional[bool] = Field(None, description='Whether the rule group is active')
 
 
 class RuleExecuteResult(BaseModel):

@@ -22,6 +22,10 @@ from ..models.firefly_models import (
     InsightTotal,
     InsightTransfer,
     RuleArray,
+    RuleGroupArray,
+    RuleGroupSingle,
+    RuleGroupStore,
+    RuleGroupUpdate,
     RuleSingle,
     RuleStore,
     RuleUpdate,
@@ -587,3 +591,32 @@ class FireflyClient:
         self._handle_api_error(r)
         r.raise_for_status()
         return r.status_code == 204
+
+    # =========================================================================
+    # Rule Group Management Methods
+    # =========================================================================
+
+    async def get_rule_groups(self, page: int = 1) -> RuleGroupArray:
+        """Get all rule groups with pagination."""
+        r = await self._client.get('/api/v1/rule-groups', params={'page': page})
+        self._handle_api_error(r)
+        r.raise_for_status()
+        return RuleGroupArray.model_validate(r.json())
+
+    async def create_rule_group(self, rule_group_store: RuleGroupStore) -> RuleGroupSingle:
+        """Create a new rule group."""
+        payload = self._serialize_model(rule_group_store)
+        r = await self._client.post('/api/v1/rule-groups', json=payload)
+        self._handle_api_error(r, payload)
+        r.raise_for_status()
+        return RuleGroupSingle.model_validate(r.json())
+
+    async def update_rule_group(
+        self, rule_group_id: str, rule_group_update: RuleGroupUpdate
+    ) -> RuleGroupSingle:
+        """Update an existing rule group (title, description, order, active)."""
+        payload = self._serialize_model(rule_group_update, exclude_unset=True)
+        r = await self._client.put(f'/api/v1/rule-groups/{rule_group_id}', json=payload)
+        self._handle_api_error(r, payload)
+        r.raise_for_status()
+        return RuleGroupSingle.model_validate(r.json())

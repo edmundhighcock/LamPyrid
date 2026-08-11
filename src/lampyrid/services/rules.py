@@ -10,19 +10,33 @@ from typing import List
 from pydantic import ValidationError
 
 from ..clients.firefly import FireflyClient
-from ..models.firefly_models import RuleActionStore, RuleActionUpdate, RuleStore, RuleTriggerStore, RuleTriggerType, RuleTriggerUpdate, RuleUpdate
+from ..models.firefly_models import (
+    RuleActionStore,
+    RuleActionUpdate,
+    RuleGroupStore,
+    RuleGroupUpdate,
+    RuleStore,
+    RuleTriggerStore,
+    RuleTriggerType,
+    RuleTriggerUpdate,
+    RuleUpdate,
+)
 from ..models.lampyrid_models import (
+    CreateRuleGroupRequest,
     CreateRuleRequest,
     ExecuteRuleRequest,
     GetRuleRequest,
+    ListRuleGroupsRequest,
     Rule,
     RuleActionSimple,
     RuleExecuteResult,
+    RuleGroupInfo,
     RuleTestResult,
     RuleTriggerSimple,
     SearchRulesRequest,
     TestRuleRequest,
     Transaction,
+    UpdateRuleGroupRequest,
     UpdateRuleRequest,
 )
 
@@ -321,3 +335,71 @@ class RuleService:
                 'Check the rule or transactions later to confirm changes.'
             ),
         )
+
+    async def list_rule_groups(self, req: ListRuleGroupsRequest) -> List[RuleGroupInfo]:
+        """List all rule groups with their processing order.
+
+        Args:
+            req: Empty request model (no filters)
+
+        Returns:
+            All rule groups, sorted by processing order
+
+        """
+        groups: List[RuleGroupInfo] = []
+        page = 1
+        while True:
+            group_array = await self._client.get_rule_groups(page=page)
+            groups.extend(RuleGroupInfo.from_rule_group_read(g) for g in group_array.data)
+            if (
+                not group_array.meta.pagination
+                or group_array.meta.pagination.current_page
+                >= group_array.meta.pagination.total_pages
+            ):
+                break
+            page += 1
+        groups.sort(key=lambda g: (g.order is None, g.order))
+        return groups
+
+    async def create_rule_group(self, req: CreateRuleGroupRequest) -> RuleGroupInfo:
+        """Create a new rule group.
+
+        Args:
+            req: Request containing title and optional description/order/active
+
+        Returns:
+            The created rule group
+
+        """
+        store = RuleGroupStore(
+            title=req.title,
+            description=req.description,
+            order=req.order,
+            active=req.active,
+        )
+        group_single = await self._client.create_rule_group(store)
+        return RuleGroupInfo.from_rule_group_read(group_single.data)
+
+    async def update_rule_group(self, req: UpdateRuleGroupRequest) -> RuleGroupInfo:
+        """Update a rule group's title, description, order, or active status.
+
+        Args:
+            req: Request identifying the group and the fields to change
+
+        Returns:
+            The updated rule group
+
+        """
+        fields = {
+            name: value
+            for name, value in (
+                ('title', req.title),
+                ('description', req.description),
+                ('order', req.order),
+                ('active', req.active),
+            )
+            if value is not None
+        }
+        update = RuleGroupUpdate(**fields)
+        group_single = await self._client.update_rule_group(req.rule_group_id, update)
+        return RuleGroupInfo.from_rule_group_read(group_single.data)

@@ -10,14 +10,18 @@ from fastmcp import FastMCP
 
 from ..clients.firefly import FireflyClient
 from ..models.lampyrid_models import (
+    CreateRuleGroupRequest,
     CreateRuleRequest,
     ExecuteRuleRequest,
     GetRuleRequest,
+    ListRuleGroupsRequest,
     Rule,
     RuleExecuteResult,
+    RuleGroupInfo,
     RuleTestResult,
     SearchRulesRequest,
     TestRuleRequest,
+    UpdateRuleGroupRequest,
     UpdateRuleRequest,
 )
 from ..services.rules import RuleService
@@ -111,5 +115,34 @@ def create_rules_server(client: FireflyClient) -> FastMCP:
         later to confirm the changes have been applied.
         """
         return await rule_service.execute_rule(req)
+
+    @rules_mcp.tool(tags={'rules', 'groups'})
+    async def list_rule_groups(req: ListRuleGroupsRequest) -> List[RuleGroupInfo]:
+        """List all rule groups with their processing order.
+
+        Rule groups run in ascending order at store-journal time, and rules
+        run in order within each group. Use this to understand (and plan
+        changes to) rule processing order — e.g. budget-assignment rules
+        must live in a group that runs after all category-assignment rules.
+        """
+        return await rule_service.list_rule_groups(req)
+
+    @rules_mcp.tool(tags={'rules', 'groups', 'create'})
+    async def create_rule_group(req: CreateRuleGroupRequest) -> RuleGroupInfo:
+        """Create a new rule group.
+
+        If order is omitted, the group is appended after all existing groups
+        (it runs last). Move rules into it with update_rule(rule_group_id=...).
+        """
+        return await rule_service.create_rule_group(req)
+
+    @rules_mcp.tool(tags={'rules', 'groups'})
+    async def update_rule_group(req: UpdateRuleGroupRequest) -> RuleGroupInfo:
+        """Update a rule group's title, description, processing order, or active status.
+
+        Changing order re-positions the group among the others (1-based);
+        use list_rule_groups first to see current ordering.
+        """
+        return await rule_service.update_rule_group(req)
 
     return rules_mcp
