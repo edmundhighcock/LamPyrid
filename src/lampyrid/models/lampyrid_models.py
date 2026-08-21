@@ -1386,6 +1386,17 @@ class UpdateRuleRequest(BaseModel):
     title: Optional[str] = Field(None, description='New title for the rule')
     description: Optional[str] = Field(None, description='New description for the rule')
     rule_group_id: Optional[str] = Field(None, description='Rule group ID to move the rule to')
+    trigger: Optional[str] = Field(
+        None,
+        description=(
+            'When the rule should fire. '
+            '"store-journal" = on new transactions (most common), '
+            '"update-journal" = on transaction updates, '
+            '"manual-activation" = only when run by hand. '
+            'A rule meant to act on imported transactions MUST be "store-journal": '
+            'an import is a store event, so an "update-journal" rule never fires on it.'
+        ),
+    )
     active: Optional[bool] = Field(None, description='Whether the rule is active')
     strict: Optional[bool] = Field(
         None,

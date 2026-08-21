@@ -340,6 +340,39 @@ class TestRuleService:
         mock_client.update_rule.assert_called_once()
 
     @pytest.mark.asyncio
+    async def test_update_rule_sets_trigger_type(self, service, mock_client):
+        """Test flipping a rule from update-journal to store-journal."""
+        rule_read = _make_rule_read('42', 'My Rule')
+        rule_single = RuleSingle(data=rule_read)
+        mock_client.update_rule.return_value = rule_single
+
+        req = UpdateRuleRequest(rule_id='42', trigger='store-journal')
+        await service.update_rule(req)
+
+        rule_update = mock_client.update_rule.call_args[0][1]
+        assert rule_update.trigger is RuleTriggerType.store_journal
+
+    @pytest.mark.asyncio
+    async def test_update_rule_trigger_omitted_stays_none(self, service, mock_client):
+        """Test that omitting trigger leaves it unset rather than defaulting."""
+        rule_read = _make_rule_read('42', 'My Rule')
+        rule_single = RuleSingle(data=rule_read)
+        mock_client.update_rule.return_value = rule_single
+
+        req = UpdateRuleRequest(rule_id='42', title='Renamed')
+        await service.update_rule(req)
+
+        rule_update = mock_client.update_rule.call_args[0][1]
+        assert rule_update.trigger is None
+
+    @pytest.mark.asyncio
+    async def test_update_rule_invalid_trigger_type(self, service, mock_client):
+        """Test that an unknown trigger value raises a helpful ValueError."""
+        req = UpdateRuleRequest(rule_id='42', trigger='on-tuesdays')
+        with pytest.raises(ValueError, match='Invalid trigger'):
+            await service.update_rule(req)
+
+    @pytest.mark.asyncio
     async def test_update_rule_with_triggers(self, service, mock_client):
         """Test updating rule with new triggers."""
         rule_read = _make_rule_read('42', 'Rule with New Triggers')

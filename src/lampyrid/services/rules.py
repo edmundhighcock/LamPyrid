@@ -238,10 +238,17 @@ class RuleService:
 
         """
         # Build the RuleUpdate object from the request
+        try:
+            trigger = RuleTriggerType(req.trigger) if req.trigger is not None else None
+        except ValueError:
+            valid = ', '.join(t.value for t in RuleTriggerType)
+            raise ValueError(f'Invalid trigger {req.trigger!r}. Valid values: {valid}')
+
         rule_update = RuleUpdate(
             title=req.title,
             description=req.description,
             rule_group_id=req.rule_group_id,
+            trigger=trigger,
             active=req.active,
             strict=req.strict,
             stop_processing=req.stop_processing,
