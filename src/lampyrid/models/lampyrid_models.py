@@ -980,6 +980,12 @@ class UpdateTransactionRequest(BaseModel):
         description='Currency code of the foreign currency (e.g., "GBP", "AUD"). '
         'Required when foreign_amount is provided.',
     )
+    currency_code: Optional[str] = Field(
+        None,
+        description='Currency code of the transaction itself (e.g., "SEK"), i.e. the currency '
+        'of `amount`. Set it when moving a transaction onto a source account of a different '
+        'currency, or to correct a transaction booked in the wrong currency.',
+    )
 
 
 class BulkUpdateTransactionsRequest(BaseModel):

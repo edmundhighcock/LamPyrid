@@ -380,6 +380,8 @@ class TransactionService:
             update_kwargs['foreign_amount'] = str(req.foreign_amount)
         if req.foreign_currency_code is not None:
             update_kwargs['foreign_currency_code'] = req.foreign_currency_code
+        if req.currency_code is not None:
+            update_kwargs['currency_code'] = req.currency_code
 
         trx_split_update = TransactionSplitUpdate(**update_kwargs)
 
